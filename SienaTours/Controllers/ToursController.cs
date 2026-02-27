@@ -69,6 +69,8 @@ namespace SienaTours.Controllers
         {
             if (ModelState.IsValid)
             {
+                tour.CreatedAt = DateTime.UtcNow;
+                tour.LastUpdatedAt = DateTime.UtcNow;
                 _context.Add(tour);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -107,38 +109,42 @@ namespace SienaTours.Controllers
         }
 
         // POST: Tours/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,DurationMinutes,PricePerPerson,Language,StartLocation,EndLocation,MeetingPointDetails,Difficulty,IsActive,CreatedAt,LastUpdatedAt,Tags")] Tour tour)
+        public async Task<IActionResult> Edit(int id, TourFormViewModel vm)
         {
-            if (id != tour.Id)
-            {
-                return NotFound();
-            }
+            if (id != vm.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    _context.Update(tour);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!TourExists(tour.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                var tour = await _context.Tours.FindAsync(id);
+                if (tour == null) return NotFound();
+
+                // Map fields manually
+                tour.Name = vm.Name;
+                tour.Description = vm.Description;
+                tour.DurationMinutes = vm.DurationMinutes;
+                tour.PricePerPerson = vm.PricePerPerson;
+                tour.Language = vm.Language;
+                tour.StartLocation = vm.StartLocation;
+                tour.EndLocation = vm.EndLocation;
+                tour.MeetingPointDetails = vm.MeetingPointDetails;
+                tour.Difficulty = vm.Difficulty;
+                tour.IsActive = vm.IsActive;
+                tour.Tags = vm.Tags;
+
+                tour.LastUpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
                 return RedirectToAction(nameof(Index));
             }
-            return View(tour);
+
+            // Re-populate dropdown if validation fails
+            vm.DifficultyOptions = Enum.GetValues<DifficultyLevel>()
+                .Select(d => new SelectListItem { Value = d.ToString(), Text = d.ToString() });
+
+            return View(vm);
         }
 
         // GET: Tours/Delete/5
